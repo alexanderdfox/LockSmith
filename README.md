@@ -1,5 +1,5 @@
 ### clone repo
-### cd <repo>
+### cd into repo
 ### ./Locksmith
 
 or
