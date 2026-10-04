@@ -1,6 +1,6 @@
-#### clone repo
-#### cd <repo>
-#### ./Locksmith
+### clone repo
+### cd <repo>
+### ./Locksmith
 
 or
 
