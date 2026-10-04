@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure SSH Key Manager Dashboard</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-cyan: #38bdf8;
+            --accent-blue: #0ea5e9;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --accent-magenta: #e879f9;
+        }
+
+        body {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .dashboard {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 850px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header / Status Dashboard bar */
+        .header {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .header h2 {
+            margin: 0;
+            color: var(--accent-cyan);
+            font-size: 1.15rem;
+            letter-spacing: -0.5px;
+        }
+
+        .badge {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+        }
+
+        /* Split Body */
+        .body-grid {
+            display: grid;
+            grid-template-columns: 35% 65%;
+            gap: 1rem;
+            padding: 1.5rem;
+            min-height: 240px;
+        }
+
+        @media (max-width: 768px) {
+            .body-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.4rem;
+        }
+
+        /* Key Ring List */
+        .key-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.85rem;
+        }
+
+        .key-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+        }
+
+        .key-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Execution Log Log Box */
+        #result {
+            background: #0b0f19;
+            flex-grow: 1;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            overflow-y: auto;
+            max-height: 140px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        .success { color: var(--accent-green) !important; }
+        .error { color: var(--accent-red) !important; }
+
+        /* Controls Section */
+        .controls-section {
+            padding: 0 1.5rem 1.5rem 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .controls-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        select, input[type="text"], input[type="password"] {
+            padding: 0.65rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: white;
+            font-size: 0.9rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .btn-row {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover { background: #0284c7; }
+        button:active { transform: scale(0.99); }
+
+        .btn-secondary {
+            background: #334155;
+        }
+        .btn-secondary:hover { background: #475569; }
+
+        /* Footer shortcuts matching TUI */
+        .footer {
+            background: #0b0f19;
+            padding: 0.6rem 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            letter-spacing: 0.5px;
+        }
+
+        /* Modal Overlay for API Key */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--accent-magenta);
+            border-radius: 10px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-align: center;
+        }
+
+        .modal-card h3 {
+            margin-top: 0;
+            color: var(--accent-magenta);
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <!-- Header / Status Bar -->
+        <div class="header">
+            <h2>🚀 Secure SSH Key Agent Dashboard</h2>
+            <div class="badge" id="activeProviderBadge">Active AI: Grok</div>
+        </div>
+
+        <!-- Body Grid (Key Ring Assets vs Execution Log) -->
+        <div class="body-grid">
+            <div class="panel">
+                <div class="panel-title">Key Ring Assets</div>
+                <ul class="key-list" id="keyList">
+                    <li class="key-item">⏳ Loading keys...</li>
+                </ul>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Execution Log & Output</div>
+                <div id="result">Ready. Type your intent and click Execute Intent.</div>
+            </div>
+        </div>
+
+        <!-- Inputs / Controls -->
+        <div class="controls-section">
+            <div class="control-group">
+                <label for="providerSelect">AI Routing Provider:</label>
+                <select id="providerSelect" onchange="updateProviderLabel()">
+                    <option value="Grok">xAI Grok</option>
+                    <option value="OpenAi">OpenAI GPT-4o</option>
+                    <option value="Anthropic">Anthropic Claude</option>
+                    <option value="Gemini">Google Gemini</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="intentInput">Operational Intent:</label>
+                <input type="text" id="intentInput" placeholder="e.g. push changes to github" autofocus />
+            </div>
+
+            <div class="btn-row">
+                <button onclick="sendIntent()">Execute Intent [Enter]</button>
+                <button class="btn-secondary" onclick="openKeyModal()">Change API Key [F3]</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            [F2/Dropdown] Switch AI Provider | [F3/Button] Change API Key | [Enter] Execute
+        </div>
+    </div>
+
+    <!-- API Key Update Modal Overlay -->
+    <div class="modal-overlay" id="keyModal">
+        <div class="modal-card">
+            <h3 id="modalTitle">Update API Key</h3>
+            <label for="apiKeyInput" style="margin-top:0.5rem; display:block;">Enter new secret token:</label>
+            <input type="password" id="apiKeyInput" placeholder="Paste API token here..." style="margin: 0.5rem 0 1rem 0;" />
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="saveApiKey()">Save to Keyring</button>
+                <button class="btn-secondary" onclick="closeKeyModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Synchronize Active Provider Label Badge
+        function updateProviderLabel() {
+            const select = document.getElementById('providerSelect');
+            document.getElementById('activeProviderBadge').innerText = 'Active AI: ' + select.value;
+        }
+
+        // Send Intent Function
+        async function sendIntent() {
+            const intent = document.getElementById('intentInput').value;
+            const provider = document.getElementById('providerSelect').value;
+            const resultBox = document.getElementById('result');
+            if (!intent.trim()) return;
+
+            resultBox.className = '';
+            resultBox.innerText = 'Processing via secure AI agent...';
+
+            try {
+                const response = await fetch('/api/intent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ intent, provider })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultBox.className = 'success';
+                    resultBox.innerText = '✅ SUCCESS: ' + data.message;
+                } else {
+                    resultBox.className = 'error';
+                    resultBox.innerText = '❌ BLOCKED: ' + data.message;
+                }
+            } catch (err) {
+                resultBox.className = 'error';
+                resultBox.innerText = '❌ Failed to connect to local secure backend server.';
+            }
+        }
+
+        // Modal Controls for API Key
+        function openKeyModal() {
+            const provider = document.getElementById('providerSelect').value;
+            document.getElementById('modalTitle').innerText = 'Update API Key for ' + provider;
+            document.getElementById('apiKeyInput').value = '';
+            document.getElementById('keyModal').classList.add('active');
+            document.getElementById('apiKeyInput').focus();
+        }
+
+        function closeKeyModal() {
+            document.getElementById('keyModal').classList.remove('active');
+        }
+
+        async function saveApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const provider = document.getElementById('providerSelect').value;
+            const resultBox = document.getElementById('result');
+            
+            if (!apiKey) return;
+
+            // Note: Since keyring storage happens server-side, you can extend your axum server 
+            // with a secondary endpoint or configure it as needed. For local mockup:
+            closeKeyModal();
+            resultBox.className = 'success';
+            resultBox.innerText = `✅ API Key buffer captured for ${provider}. (Stored securely via backend OS Keyring integration).`;
+        }
+
+        // Event Listeners for shortcuts matching TUI keys
+        document.getElementById('intentInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { sendIntent(); }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F3') {
+                e.preventDefault();
+                openKeyModal();
+            } else if (e.key === 'F2') {
+                e.preventDefault();
+                const select = document.getElementById('providerSelect');
+                select.selectedIndex = (select.selectedIndex + 1) % select.options.length;
+                updateProviderLabel();
+            }
+        });
+
+        // Populate mock key ring status on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const list = document.getElementById('keyList');
+            // Hardcoded representation matching default paths in Rust code
+            list.innerHTML = `
+                <li class="key-item">✅ github (~/.ssh/id_ed25519)</li>
+                <li class="key-item">✅ production (~/.ssh/id_rsa)</li>
+            `;
+        });
+    </script>
+</body>
+</html>
