@@ -1,6 +1,8 @@
-cd Locksmith
-./Locksmith
+#### clone repo
+#### cd <repo>
+#### ./Locksmith
 
+or
 
 # Run with index.html in the current directory running Locksmith.
 
